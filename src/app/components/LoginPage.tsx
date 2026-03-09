@@ -725,7 +725,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               </div>
               <h3 className="login-overlay-title">Welcome Back!</h3>
               <p className="login-overlay-desc">
-                Already have an account? Sign in to access your AgriTrade territory dashboard.
+                Already have an account? Sign in to access your GenTrade territory dashboard.
               </p>
               <button type="button" className="login-toggle-btn" onClick={handleToggle}>
                 Sign In
@@ -740,7 +740,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               </div>
               <h3 className="login-overlay-title">Hello, Friend!</h3>
               <p className="login-overlay-desc">
-                Don't have an account yet? Register now and start managing your territory with AgriTrade.
+                Don't have an account yet? Register now and start managing your territory with GenTrade.
               </p>
               <button type="button" className="login-toggle-btn" onClick={handleToggle}>
                 Sign Up

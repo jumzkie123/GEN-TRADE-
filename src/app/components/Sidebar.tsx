@@ -5,16 +5,59 @@ import {
   ChevronDown,
   Leaf,
   Settings,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { supabase } from "../../lib/supabase";
 
 interface SidebarProps {
   currentPage: string;
   onPageChange: (page: string) => void;
+  categories?: { name: string }[];
+  onCategoriesChanged?: () => void;
 }
 
-export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
+export function Sidebar({ currentPage, onPageChange, categories = [], onCategoriesChanged }: SidebarProps) {
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["inventory", "agriculture"]);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) return;
+    await supabase.from("market_categories").insert({ name: newCatName.trim() });
+    setNewCatName("");
+    setIsAddingCategory(false);
+    if (onCategoriesChanged) onCategoriesChanged();
+  };
+
+  const handleDeleteCategory = async (e: React.MouseEvent, catName: string) => {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete category "${catName}"? This will not delete the market data but it will remove the navigation link.`)) return;
+    
+    const { error } = await supabase
+      .from("market_categories")
+      .delete()
+      .eq("name", catName);
+    
+    if (!error && onCategoriesChanged) {
+      onCategoriesChanged();
+      if (currentPage === `market-${catName}`) {
+        onPageChange("reports");
+      }
+    }
+  };
+
+  const agricultureSubItems = categories.length > 0
+    ? categories.map(c => ({ id: `market-${c.name}`, label: c.name }))
+    : [
+      { id: "market-Herbicide", label: "Herbicide" },
+      { id: "market-Insecticide", label: "Insecticide" },
+      { id: "market-Molluscicide", label: "Molluscicide" },
+      { id: "market-Fungicide", label: "Fungicide" },
+      { id: "market-Others", label: "Others" }
+    ];
 
   const menuItems = [
     {
@@ -30,9 +73,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
       id: "agriculture",
       label: "Agriculture",
       icon: Sprout,
-      subItems: [
-        { id: "market-potential", label: "Market Potential" }
-      ]
+      subItems: agricultureSubItems
     },
     { id: "reports", label: "Reports", icon: FileText }
   ];
@@ -189,7 +230,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
             fontSize: '16px', fontWeight: 700, color: '#ffffff',
             letterSpacing: '1px', lineHeight: 1.2, margin: 0,
             fontFamily: "'Poppins', sans-serif",
-          }}>AGRITRADE</h1>
+          }}>GenTrade</h1>
           <p style={{
             fontSize: '10px', color: 'rgba(74, 222, 128, 0.7)',
             fontWeight: 600, letterSpacing: '2.5px',
@@ -271,43 +312,89 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
               </button>
 
               {/* Sub-items */}
-              {item.subItems && isMenuExpanded && (
-                <div style={{
-                  marginLeft: '26px',
-                  paddingLeft: '16px',
-                  borderLeft: '1px solid rgba(34, 197, 94, 0.15)',
-                  marginTop: '4px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '2px',
-                  animation: 'slideDown 0.3s ease-out',
-                }}>
-                  {item.subItems.map((subItem) => {
-                    const isSubActive = currentPage === subItem.id;
-                    return (
-                      <button
-                        key={subItem.id}
-                        onClick={() => onPageChange(subItem.id)}
-                        className={`sidebar-sub-btn ${isSubActive ? 'sidebar-sub-btn-active' : ''}`}
-                        style={{
-                          fontWeight: isSubActive ? 600 : 400,
-                          color: isSubActive ? '#4ade80' : 'rgba(255,255,255,0.4)',
-                          background: isSubActive ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
-                        }}
-                      >
-                        <div style={{
-                          width: '6px', height: '6px', borderRadius: '50%',
-                          background: isSubActive ? '#4ade80' : 'rgba(255,255,255,0.2)',
-                          boxShadow: isSubActive ? '0 0 10px rgba(74, 222, 128, 0.6)' : 'none',
-                          transition: 'all 0.25s ease',
-                          flexShrink: 0,
-                        }} />
-                        {subItem.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <AnimatePresence>
+                {item.subItems && isMenuExpanded && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    style={{
+                      marginLeft: '26px',
+                      paddingLeft: '16px',
+                      borderLeft: '1px solid rgba(34, 197, 94, 0.15)',
+                      marginTop: '4px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {item.subItems.map((subItem) => {
+                      const isSubActive = currentPage === subItem.id;
+                      return (
+                        <button
+                          key={subItem.id}
+                          onClick={() => onPageChange(subItem.id)}
+                          className={`sidebar-sub-btn ${isSubActive ? 'sidebar-sub-btn-active' : ''} group`}
+                          style={{
+                            fontWeight: isSubActive ? 600 : 400,
+                            color: isSubActive ? '#4ade80' : 'rgba(255,255,255,0.4)',
+                            background: isSubActive ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                          }}
+                        >
+                          <div style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: isSubActive ? '#4ade80' : 'rgba(255,255,255,0.2)',
+                            boxShadow: isSubActive ? '0 0 10px rgba(74, 222, 128, 0.6)' : 'none',
+                            transition: 'all 0.25s ease',
+                            flexShrink: 0,
+                          }} />
+                          <span className="flex-1">{subItem.label}</span>
+                          {item.id === "agriculture" && (
+                            <button 
+                              onClick={(e) => handleDeleteCategory(e, subItem.label)}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded text-white/30 hover:text-red-400 transition-all ml-auto"
+                              title="Delete category"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </button>
+                      );
+                    })}
+                    {item.id === "agriculture" && (
+                      <div className="mt-2 px-2">
+                        {isAddingCategory ? (
+                          <div className="flex items-center gap-2 mt-2">
+                            <input
+                              autoFocus
+                              className="text-xs w-full bg-white/10 text-white placeholder-white/40 border border-white/20 rounded px-2 py-1 outline-none focus:border-green-500 transition-all font-sans"
+                              placeholder="New category..."
+                              value={newCatName}
+                              onChange={(e) => setNewCatName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleAddCategory();
+                                if (e.key === "Escape") setIsAddingCategory(false);
+                              }}
+                            />
+                            <button onClick={handleAddCategory} className="text-green-400 hover:text-green-300 p-1">
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setIsAddingCategory(true)}
+                            className="flex items-center gap-2 text-xs text-white/40 hover:text-green-400 transition-all py-1.5 px-2 mt-1 w-full text-left font-medium rounded hover:bg-white/5 font-sans"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Add Category
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           );
         })}
