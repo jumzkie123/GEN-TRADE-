@@ -7,6 +7,7 @@ import { StockLevelsPage } from "./components/StockLevelsPage";
 import { MarketPotentialPage } from "./components/MarketPotentialPage";
 import { ReportsPage } from "./components/ReportsPage";
 import { LoginPage } from "./components/LoginPage";
+import { RegionalDashboard } from "./components/RegionalDashboard";
 import { supabase } from "../lib/supabase";
 import { Session } from "@supabase/supabase-js";
 
@@ -73,6 +74,17 @@ export default function App() {
 
   if (!session) {
     return <LoginPage onLogin={() => { }} />;
+  }
+
+  const userMeta = session.user.user_metadata || {};
+  if (userMeta.client_type === "regional") {
+    return (
+      <RegionalDashboard
+        regionCode={userMeta.region}
+        municipalityCode={userMeta.municipality}
+        user={session.user}
+      />
+    );
   }
 
   return (

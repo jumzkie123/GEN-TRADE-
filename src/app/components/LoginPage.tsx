@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Leaf, User, Lock, Mail, ArrowRight, Loader2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
@@ -18,6 +18,69 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [signUpName, setSignUpName] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpPassword, setSignUpPassword] = useState("");
+  
+  const [clientType, setClientType] = useState<"specific" | "regional">("specific");
+  const [regions, setRegions] = useState<any[]>([]);
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [municipalities, setMunicipalities] = useState<any[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState("");
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedMunicipality, setSelectedMunicipality] = useState("");
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+
+  // Fetch Regions on mount if they switch to regional
+  useEffect(() => {
+    if (clientType === "regional" && regions.length === 0) {
+      setIsLoadingLocations(true);
+      fetch("https://psgc.gitlab.io/api/regions/")
+        .then(res => res.json())
+        .then(data => {
+          setRegions(data.sort((a: any, b: any) => a.name.localeCompare(b.name)));
+          setIsLoadingLocations(false);
+        })
+        .catch(() => setIsLoadingLocations(false));
+    }
+  }, [clientType]);
+
+  // Fetch Provinces when Region changes
+  useEffect(() => {
+    if (selectedRegion) {
+      setIsLoadingLocations(true);
+      fetch(`https://psgc.gitlab.io/api/regions/${selectedRegion}/provinces/`)
+        .then(res => res.json())
+        .then(data => {
+          setProvinces(data.sort((a: any, b: any) => a.name.localeCompare(b.name)));
+          setSelectedProvince("");
+          setMunicipalities([]);
+          setSelectedMunicipality("");
+          setIsLoadingLocations(false);
+        })
+        .catch(() => setIsLoadingLocations(false));
+    } else {
+      setProvinces([]);
+      setSelectedProvince("");
+      setMunicipalities([]);
+      setSelectedMunicipality("");
+    }
+  }, [selectedRegion]);
+
+  // Fetch Municipalities when Province changes
+  useEffect(() => {
+    if (selectedProvince) {
+      setIsLoadingLocations(true);
+      fetch(`https://psgc.gitlab.io/api/provinces/${selectedProvince}/cities-municipalities/`)
+        .then(res => res.json())
+        .then(data => {
+          setMunicipalities(data.sort((a: any, b: any) => a.name.localeCompare(b.name)));
+          setSelectedMunicipality("");
+          setIsLoadingLocations(false);
+        })
+        .catch(() => setIsLoadingLocations(false));
+    } else {
+      setMunicipalities([]);
+      setSelectedMunicipality("");
+    }
+  }, [selectedProvince]);
 
   const handleToggle = () => {
     setIsTransitioning(true);
@@ -61,6 +124,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         options: {
           data: {
             full_name: signUpName,
+            client_type: clientType,
+            region: selectedRegion,
+            province: selectedProvince,
+            municipality: selectedMunicipality
           },
         },
       });
@@ -134,7 +201,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         /* Main container */
         .login-container {
           width: 900px;
-          height: 540px;
+          height: 680px; /* Increased height to accommodate the new dropdowns */
           position: relative;
           border-radius: 24px;
           overflow: hidden;
@@ -262,18 +329,18 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         .login-form-subtitle {
           font-size: 13px;
           color: rgba(255, 255, 255, 0.4);
-          margin: 0 0 32px 0;
+          margin: 0 0 24px 0;
           font-weight: 400;
         }
 
         /* Input group */
         .login-input-group {
           position: relative;
-          margin-bottom: 18px;
+          margin-bottom: 14px;
         }
         .login-input-group input {
           width: 100%;
-          height: 48px;
+          height: 44px;
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 12px;
@@ -325,7 +392,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         /* Submit button */
         .login-submit-btn {
           width: 100%;
-          height: 48px;
+          height: 44px;
           border: none;
           border-radius: 12px;
           background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
@@ -621,6 +688,76 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 />
                 <Lock className="login-input-icon" size={18} />
               </div>
+
+              <div className="login-input-group" style={{ marginBottom: '12px', display: 'flex', gap: '10px' }}>
+                <label style={{ color: '#fff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input type="radio" name="clientType" value="specific" checked={clientType === "specific"} onChange={() => setClientType("specific")} />
+                  Specific Client
+                </label>
+                <label style={{ color: '#fff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input type="radio" name="clientType" value="regional" checked={clientType === "regional"} onChange={() => setClientType("regional")} />
+                  Regional Client
+                </label>
+              </div>
+
+              {clientType === "regional" && (
+                <>
+                  <div className="login-input-group">
+                    <select
+                      value={selectedRegion}
+                      onChange={(e) => setSelectedRegion(e.target.value)}
+                      required
+                      disabled={isLoading || isLoadingLocations}
+                      style={{
+                        width: '100%', height: '44px', background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
+                        padding: '0 16px', fontSize: '14px', color: '#ffffff', outline: 'none'
+                      }}
+                    >
+                      <option value="" disabled style={{ color: '#000' }}>Select Region</option>
+                      {regions.map(r => (
+                        <option key={r.code} value={r.code} style={{ color: '#000' }}>{r.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="login-input-group">
+                    <select
+                      value={selectedProvince}
+                      onChange={(e) => setSelectedProvince(e.target.value)}
+                      required
+                      disabled={isLoading || isLoadingLocations || !selectedRegion}
+                      style={{
+                        width: '100%', height: '44px', background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
+                        padding: '0 16px', fontSize: '14px', color: '#ffffff', outline: 'none'
+                      }}
+                    >
+                      <option value="" disabled style={{ color: '#000' }}>Select Province</option>
+                      {provinces.map(p => (
+                        <option key={p.code} value={p.code} style={{ color: '#000' }}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="login-input-group">
+                    <select
+                      value={selectedMunicipality}
+                      onChange={(e) => setSelectedMunicipality(e.target.value)}
+                      required
+                      disabled={isLoading || isLoadingLocations || !selectedProvince}
+                      style={{
+                        width: '100%', height: '44px', background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
+                        padding: '0 16px', fontSize: '14px', color: '#ffffff', outline: 'none'
+                      }}
+                    >
+                      <option value="" disabled style={{ color: '#000' }}>Select Municipality</option>
+                      {municipalities.map(m => (
+                        <option key={m.code} value={m.code} style={{ color: '#000' }}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
 
               <button type="submit" className="login-submit-btn" style={{ marginTop: '8px' }} disabled={isLoading}>
                 {isLoading ? (

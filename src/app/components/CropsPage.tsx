@@ -30,6 +30,14 @@ export function CropsPage() {
   const [editingCrop, setEditingCrop] = useState<Crop | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingCrop(null);
+    setForm(emptyForm);
+    setIsCustomCategory(false);
+  };
 
   // Fetch data
   const fetchCrops = async () => {
@@ -53,9 +61,7 @@ export function CropsPage() {
       await supabase.from("crops").insert([form]);
     }
     setSaving(false);
-    setShowForm(false);
-    setEditingCrop(null);
-    setForm(emptyForm);
+    handleCloseForm();
     fetchCrops();
   };
 
@@ -87,6 +93,9 @@ export function CropsPage() {
     setEditingCrop(crop);
     setForm({ name: crop.name, category: crop.category, stock: crop.stock, unit: crop.unit, min_stock: crop.min_stock, max_stock: crop.max_stock });
     setShowForm(true);
+    // If the category isn't a known default and isn't populated, the select wouldn't match, but it is populated dynamically!
+    // However, if we want to show input explicitly, we could do that. Since we map existing categories into the select, it will be selectable there by default.
+    setIsCustomCategory(false);
   };
 
   // Filter
@@ -162,11 +171,11 @@ export function CropsPage() {
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setShowForm(false); setEditingCrop(null); setForm(emptyForm); }}>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={handleCloseForm}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-gray-900">{editingCrop ? "Edit Crop" : "Add New Crop"}</h3>
-              <button onClick={() => { setShowForm(false); setEditingCrop(null); setForm(emptyForm); }} className="p-2 hover:bg-gray-100 rounded-xl"><X className="h-5 w-5 text-gray-500" /></button>
+              <button onClick={handleCloseForm} className="p-2 hover:bg-gray-100 rounded-xl"><X className="h-5 w-5 text-gray-500" /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -176,12 +185,49 @@ export function CropsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider text-left block ml-1 mb-1">Section / Category</label>
-                  <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full mt-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] outline-none">
-                    <option value="Grain">Grain (Rice, Corn, etc)</option>
-                    <option value="Vegetables">Vegetables</option>
-                    <option value="Fruit">Fruit (Mango, etc)</option>
-                    <option value="Others">Other Crops</option>
-                  </select>
+                  {isCustomCategory ? (
+                    <div className="relative">
+                      <input 
+                        value={form.category} 
+                        onChange={e => setForm({ ...form, category: e.target.value })} 
+                        className="w-full mt-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] outline-none pr-10" 
+                        placeholder="Enter custom category" 
+                        autoFocus
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setIsCustomCategory(false);
+                          setForm({ ...form, category: "Grain" });
+                        }}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 mt-0.5 text-gray-400 hover:text-gray-600 bg-white p-1 rounded-full"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <select 
+                      value={form.category} 
+                      onChange={e => {
+                        if (e.target.value === "custom") {
+                          setIsCustomCategory(true);
+                          setForm({ ...form, category: "" });
+                        } else {
+                          setForm({ ...form, category: e.target.value });
+                        }
+                      }} 
+                      className="w-full mt-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] outline-none"
+                    >
+                      <option value="Grain">Grain (Rice, Corn, etc)</option>
+                      <option value="Vegetables">Vegetables</option>
+                      <option value="Fruit">Fruit (Mango, etc)</option>
+                      <option value="Others">Other Crops</option>
+                      {categories.filter(c => !["Grain", "Vegetables", "Fruit", "Others"].includes(c)).map(c => (
+                        <option key={`cat-${c}`} value={c}>{c}</option>
+                      ))}
+                      <option value="custom" className="font-bold text-[#2E7D32] bg-green-50">+ Add Custom Category...</option>
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider text-left block ml-1 mb-1">Base Unit</label>
@@ -206,7 +252,7 @@ export function CropsPage() {
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { setShowForm(false); setEditingCrop(null); setForm(emptyForm); }}>Cancel</Button>
+              <Button variant="outline" className="flex-1 rounded-xl" onClick={handleCloseForm}>Cancel</Button>
               <Button className="flex-1 bg-gradient-to-r from-[#2E7D32] to-[#388E3C] hover:from-[#1B5E20] hover:to-[#2E7D32] shadow-md shadow-green-500/20 rounded-xl" onClick={handleSave} disabled={saving || !form.name}>
                 {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 {editingCrop ? "Update" : "Save"}
@@ -225,7 +271,7 @@ export function CropsPage() {
               <p className="text-sm text-gray-500 mt-0.5">Manage and track crop data</p>
             </div>
             <div className="flex gap-2">
-              <Button className="bg-gradient-to-r from-[#2E7D32] to-[#388E3C] hover:from-[#1B5E20] hover:to-[#2E7D32] shadow-md shadow-green-500/20 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 rounded-xl" onClick={() => { setForm(emptyForm); setEditingCrop(null); setShowForm(true); }}>
+              <Button className="bg-gradient-to-r from-[#2E7D32] to-[#388E3C] hover:from-[#1B5E20] hover:to-[#2E7D32] shadow-md shadow-green-500/20 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 rounded-xl" onClick={() => { setForm(emptyForm); setEditingCrop(null); setShowForm(true); setIsCustomCategory(false); }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Crop
               </Button>
