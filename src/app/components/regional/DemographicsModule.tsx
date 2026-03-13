@@ -13,6 +13,7 @@ interface DemographicsModuleProps {
 
 export function DemographicsModule({ user, regionCode, municipalityCode, barangays }: DemographicsModuleProps) {
   const [data, setData] = useState<Record<string, any>>({});
+  const [farmerCounts, setFarmerCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -24,23 +25,44 @@ export function DemographicsModule({ user, regionCode, municipalityCode, baranga
   useEffect(() => {
     if (!user?.id || !municipalityCode) return;
     setLoading(true);
-    supabase
-      .from("regional_demographics")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("municipality_code", municipalityCode)
-      .eq("period_type", pq.period_type)
-      .eq("report_year", pq.report_year)
-      .eq("report_quarter", pq.report_quarter)
-      .eq("report_month", pq.report_month)
-      .then(({ data: dbData }) => {
-        const map: Record<string, any> = {};
-        if (dbData) {
-          dbData.forEach((row: any) => { map[row.barangay_code] = row; });
-        }
-        setData(map);
-        setLoading(false);
+    Promise.all([
+      supabase
+        .from("regional_demographics")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("municipality_code", municipalityCode)
+        .eq("period_type", pq.period_type)
+        .eq("report_year", pq.report_year)
+        .eq("report_quarter", pq.report_quarter)
+        .eq("report_month", pq.report_month),
+      supabase
+        .from("regional_farmers")
+        .select("barangay_code")
+        .eq("user_id", user.id)
+        .eq("municipality_code", municipalityCode),
+    ]).then(([{ data: dbData }, { data: farmers }]) => {
+      // Build demographics map
+      const map: Record<string, any> = {};
+      if (dbData) {
+        dbData.forEach((row: any) => { map[row.barangay_code] = row; });
+      }
+      // Build farmer counts per barangay
+      const counts: Record<string, number> = {};
+      (farmers || []).forEach((f: any) => {
+        counts[f.barangay_code] = (counts[f.barangay_code] || 0) + 1;
       });
+      setFarmerCounts(counts);
+      // Auto-set households = farmer count for barangays with no saved households yet
+      barangays.forEach(b => {
+        if (!map[b.code]) {
+          map[b.code] = { households: counts[b.code] || 0, population: 0 };
+        } else if ((map[b.code].households === 0 || map[b.code].households == null) && counts[b.code]) {
+          map[b.code] = { ...map[b.code], households: counts[b.code] };
+        }
+      });
+      setData(map);
+      setLoading(false);
+    });
   }, [user?.id, municipalityCode, period.type, period.year, period.quarter, period.month]);
 
   const handleChange = (brgyCode: string, field: string, val: string) => {
@@ -110,7 +132,7 @@ export function DemographicsModule({ user, regionCode, municipalityCode, baranga
         <button
           onClick={handleSave}
           disabled={saving || loading}
-          style={{ height: 44, padding: "0 22px", background: "#fff", color: "#16a34a", border: "none", borderRadius: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: 14, boxShadow: "0 4px 14px rgba(0,0,0,0.1)", opacity: saving || loading ? 0.7 : 1 }}
+          style={{ height: 44, padding: "0 22px", background: "#0f5f2e", color: "#fff", border: "2px solid rgba(255,255,255,0.25)", borderRadius: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: 14, boxShadow: "0 4px 18px rgba(0,0,0,0.35)", opacity: saving || loading ? 0.7 : 1 }}
         >
           {saving ? <><Loader2 size={16} className="animate-spin" /> Saving...</> : <><Save size={16} /> Save All</>}
         </button>
@@ -156,7 +178,7 @@ export function DemographicsModule({ user, regionCode, municipalityCode, baranga
                       onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? "#f9fafb" : "#fff")}>
                       <td style={{ padding: "10px 16px", fontWeight: 600, color: "#374151", fontSize: 13, borderRight: "1px solid #f3f4f6", position: "sticky", left: 0, zIndex: 1, background: i % 2 === 0 ? "#f9fafb" : "#fff" }}>{brgy.name}</td>
                       <td style={{ padding: "10px 16px", borderRight: "1px solid #f3f4f6" }}>
-                        <input type="number" min="0" value={row.households || ""} onChange={e => handleChange(brgy.code, "households", e.target.value)} placeholder="0" style={inputStyle} />
+                        <input type="number" min="0" value={row.households ?? (farmerCounts[brgy.code] || "")} onChange={e => handleChange(brgy.code, "households", e.target.value)} placeholder={String(farmerCounts[brgy.code] || 0)} style={inputStyle} />
                       </td>
                       <td style={{ padding: "10px 16px" }}>
                         <input type="number" min="0" value={row.population || ""} onChange={e => handleChange(brgy.code, "population", e.target.value)} placeholder="0" style={inputStyle} />

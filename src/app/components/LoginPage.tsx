@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Leaf, User, Lock, Mail, ArrowRight, Loader2 } from "lucide-react";
+import { Leaf, User, Lock, Mail, ArrowRight, Loader2, MapPin } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 interface LoginPageProps {
@@ -19,7 +19,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpPassword, setSignUpPassword] = useState("");
   
-  const [clientType, setClientType] = useState<"specific" | "regional">("specific");
+  const [clientType] = useState<"regional">("regional");
   const [regions, setRegions] = useState<any[]>([]);
   const [provinces, setProvinces] = useState<any[]>([]);
   const [municipalities, setMunicipalities] = useState<any[]>([]);
@@ -28,19 +28,18 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [selectedMunicipality, setSelectedMunicipality] = useState("");
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
 
-  // Fetch Regions on mount if they switch to regional
+  // Fetch Regions on mount
   useEffect(() => {
-    if (clientType === "regional" && regions.length === 0) {
-      setIsLoadingLocations(true);
-      fetch("https://psgc.gitlab.io/api/regions/")
-        .then(res => res.json())
-        .then(data => {
-          setRegions(data.sort((a: any, b: any) => a.name.localeCompare(b.name)));
-          setIsLoadingLocations(false);
-        })
-        .catch(() => setIsLoadingLocations(false));
-    }
-  }, [clientType]);
+    setIsLoadingLocations(true);
+    fetch("https://psgc.gitlab.io/api/regions/")
+      .then(res => res.json())
+      .then(data => {
+        // Sort by code to keep Region I, II, III order
+        setRegions(data.sort((a: any, b: any) => a.code.localeCompare(b.code)));
+        setIsLoadingLocations(false);
+      })
+      .catch(() => setIsLoadingLocations(false));
+  }, []);
 
   // Fetch Provinces when Region changes
   useEffect(() => {
@@ -689,75 +688,71 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 <Lock className="login-input-icon" size={18} />
               </div>
 
-              <div className="login-input-group" style={{ marginBottom: '12px', display: 'flex', gap: '10px' }}>
-                <label style={{ color: '#fff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                  <input type="radio" name="clientType" value="specific" checked={clientType === "specific"} onChange={() => setClientType("specific")} />
-                  Specific Client
-                </label>
-                <label style={{ color: '#fff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                  <input type="radio" name="clientType" value="regional" checked={clientType === "regional"} onChange={() => setClientType("regional")} />
-                  Regional Client
-                </label>
+              <div className="login-input-group">
+                <select
+                  value={selectedRegion}
+                  onChange={(e) => setSelectedRegion(e.target.value)}
+                  required
+                  disabled={isLoading || isLoadingLocations}
+                  style={{
+                    width: '100%', height: '44px', background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
+                    padding: '0 44px 0 16px', fontSize: '14px', color: '#ffffff', outline: 'none'
+                  }}
+                >
+                  <option value="" disabled style={{ color: '#000' }}>Select Region (e.g. REGION I, II...)</option>
+                  {regions.map(r => (
+                    <option key={r.code} value={r.code} style={{ color: '#000' }}>
+                      {r.regionName ? `${r.regionName.toUpperCase()} - ${r.name}` : r.name}
+                    </option>
+                  ))}
+                </select>
+                <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.2)', pointerEvents: 'none' }}>
+                  <MapPin size={18} />
+                </div>
               </div>
-
-              {clientType === "regional" && (
-                <>
-                  <div className="login-input-group">
-                    <select
-                      value={selectedRegion}
-                      onChange={(e) => setSelectedRegion(e.target.value)}
-                      required
-                      disabled={isLoading || isLoadingLocations}
-                      style={{
-                        width: '100%', height: '44px', background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
-                        padding: '0 16px', fontSize: '14px', color: '#ffffff', outline: 'none'
-                      }}
-                    >
-                      <option value="" disabled style={{ color: '#000' }}>Select Region</option>
-                      {regions.map(r => (
-                        <option key={r.code} value={r.code} style={{ color: '#000' }}>{r.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="login-input-group">
-                    <select
-                      value={selectedProvince}
-                      onChange={(e) => setSelectedProvince(e.target.value)}
-                      required
-                      disabled={isLoading || isLoadingLocations || !selectedRegion}
-                      style={{
-                        width: '100%', height: '44px', background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
-                        padding: '0 16px', fontSize: '14px', color: '#ffffff', outline: 'none'
-                      }}
-                    >
-                      <option value="" disabled style={{ color: '#000' }}>Select Province</option>
-                      {provinces.map(p => (
-                        <option key={p.code} value={p.code} style={{ color: '#000' }}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="login-input-group">
-                    <select
-                      value={selectedMunicipality}
-                      onChange={(e) => setSelectedMunicipality(e.target.value)}
-                      required
-                      disabled={isLoading || isLoadingLocations || !selectedProvince}
-                      style={{
-                        width: '100%', height: '44px', background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
-                        padding: '0 16px', fontSize: '14px', color: '#ffffff', outline: 'none'
-                      }}
-                    >
-                      <option value="" disabled style={{ color: '#000' }}>Select Municipality</option>
-                      {municipalities.map(m => (
-                        <option key={m.code} value={m.code} style={{ color: '#000' }}>{m.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
+              <div className="login-input-group">
+                <select
+                  value={selectedProvince}
+                  onChange={(e) => setSelectedProvince(e.target.value)}
+                  required
+                  disabled={isLoading || isLoadingLocations || !selectedRegion}
+                  style={{
+                    width: '100%', height: '44px', background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
+                    padding: '0 44px 0 16px', fontSize: '14px', color: '#ffffff', outline: 'none'
+                  }}
+                >
+                  <option value="" disabled style={{ color: '#000' }}>Select Province</option>
+                  {provinces.map(p => (
+                    <option key={p.code} value={p.code} style={{ color: '#000' }}>{p.name}</option>
+                  ))}
+                </select>
+                <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.2)', pointerEvents: 'none' }}>
+                  <MapPin size={18} />
+                </div>
+              </div>
+              <div className="login-input-group">
+                <select
+                  value={selectedMunicipality}
+                  onChange={(e) => setSelectedMunicipality(e.target.value)}
+                  required
+                  disabled={isLoading || isLoadingLocations || !selectedProvince}
+                  style={{
+                    width: '100%', height: '44px', background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
+                    padding: '0 44px 0 16px', fontSize: '14px', color: '#ffffff', outline: 'none'
+                  }}
+                >
+                  <option value="" disabled style={{ color: '#000' }}>Select Municipality</option>
+                  {municipalities.map(m => (
+                    <option key={m.code} value={m.code} style={{ color: '#000' }}>{m.name}</option>
+                  ))}
+                </select>
+                <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.2)', pointerEvents: 'none' }}>
+                  <MapPin size={18} />
+                </div>
+              </div>
 
               <button type="submit" className="login-submit-btn" style={{ marginTop: '8px' }} disabled={isLoading}>
                 {isLoading ? (

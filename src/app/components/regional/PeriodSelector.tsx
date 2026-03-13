@@ -29,7 +29,8 @@ const MONTHS = [
 ];
 
 const currentYear = new Date().getFullYear();
-const YEARS = Array.from({ length: 10 }, (_, i) => currentYear - 4 + i);
+// 40-year window: 10 years back, 29 years forward — no artificial cap
+const YEARS = Array.from({ length: 40 }, (_, i) => currentYear - 10 + i);
 
 const selectStyle: React.CSSProperties = {
   height: 40, border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "0 12px",
@@ -65,7 +66,7 @@ export function PeriodSelector({ value, onChange, label = "Period" }: PeriodSele
 
       {/* Period type tabs */}
       <div style={{ display: "flex", gap: 6 }}>
-        {(["yearly", "quarterly", "monthly"] as PeriodType[]).map(t => (
+        {(["monthly", "quarterly", "yearly"] as PeriodType[]).map(t => (
           <button key={t} onClick={() => setType(t)}
             style={{
               height: 34, padding: "0 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,

@@ -448,9 +448,11 @@ export function ReportsModule({ user, regionCode, municipalityCode, barangays, p
                   <tr>
                     <th style={{ ...thStyle, textAlign: "left", position: "sticky", left: 0, zIndex: 6, borderRight: "2px solid rgba(74,222,128,0.3)" }}>Name of Barangay</th>
                     <th style={thStyle}>Land Area (Ha)</th>
-                    <th style={{ ...thStyle, background: "#0d2210" }}>Land Area (Farmers) ✦</th>
+                    <th style={{ width: 0, padding: 0 }} />
+                    <th style={{ ...thStyle, background: "#0d2210" }}>Land Area (Farmers)</th>
                     <th style={thStyle}>Agri. Land Area (Ha)</th>
-                    <th style={{ ...thStyle, background: "#0d2210" }}>Agri. Area (Farmers) ✦</th>
+                    <th style={{ width: 0, padding: 0 }} />
+                    <th style={{ ...thStyle, background: "#0d2210" }}>Agri. Area (Farmers)</th>
                     {products.map(p => <th key={p} style={thStyle}>{p} (Ha)</th>)}
                     <th style={{ ...thStyle, background: "#0f1f0f" }}>TOTAL</th>
                   </tr>
@@ -467,23 +469,69 @@ export function ReportsModule({ user, regionCode, municipalityCode, barangays, p
                         const total = cropVals.reduce((s, v) => s + v, 0);
                         const ft = farmerLandTotals[brgy.code] || { land: 0, agri: 0 };
                         const bg = i % 2 === 0 ? "#f9fafb" : "#fff";
-                        return (
-                          <tr key={brgy.code} style={{ background: bg }}>
-                            <td style={{ ...tdFirst, background: bg }}>{brgy.name}</td>
-                            <td style={tdStyle}>{row.land_area_ha || "—"}</td>
-                            <td style={{ ...tdStyle, background: "rgba(34,197,94,0.07)", color: "#16a34a", fontWeight: 700 }}>{ft.land.toFixed(2)}</td>
-                            <td style={tdStyle}>{row.agri_land_area_ha || "—"}</td>
-                            <td style={{ ...tdStyle, background: "rgba(34,197,94,0.07)", color: "#16a34a", fontWeight: 700 }}>{ft.agri.toFixed(2)}</td>
-                            {cropVals.map((v, ci) => <td key={ci} style={tdStyle}>{v || "—"}</td>)}
-                            <td style={tdTotal}>{total.toFixed(2)}</td>
-                          </tr>
-                        );
+                          const manualLand = Number(row.land_area_ha) || 0;
+                          const autoLand = ft.land;
+                          const landDiff = Math.abs(manualLand - autoLand) > 0.01;
+                          
+                          const manualAgri = Number(row.agri_land_area_ha) || 0;
+                          const autoAgri = ft.agri;
+                          const agriDiff = Math.abs(manualAgri - autoAgri) > 0.01;
+
+                          return (
+                            <tr key={brgy.code} style={{ background: bg }}>
+                              <td style={{ ...tdFirst, background: bg }}>{brgy.name}</td>
+                              <td style={{ ...tdStyle, background: landDiff ? "#fef2f2" : bg, color: landDiff ? "#ef4444" : "#374151" }}>{manualLand.toFixed(2)}</td>
+                              <td style={{ padding: 0, position: "relative", width: 0 }}>
+                                {landDiff && (
+                                  <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "1px 4px", borderRadius: 4, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                                    {(manualLand - autoLand).toFixed(2)}
+                                  </div>
+                                )}
+                              </td>
+                              <td style={{ ...tdStyle, background: "rgba(34,197,94,0.07)", color: "#16a34a", fontWeight: 700 }}>{autoLand.toFixed(2)}</td>
+                              <td style={{ ...tdStyle, background: agriDiff ? "#fef2f2" : bg, color: agriDiff ? "#ef4444" : "#374151" }}>{manualAgri.toFixed(2)}</td>
+                              <td style={{ padding: 0, position: "relative", width: 0 }}>
+                                {agriDiff && (
+                                  <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "1px 4px", borderRadius: 4, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                                    {(manualAgri - autoAgri).toFixed(2)}
+                                  </div>
+                                )}
+                              </td>
+                              <td style={{ ...tdStyle, background: "rgba(34,197,94,0.07)", color: "#16a34a", fontWeight: 700 }}>{autoAgri.toFixed(2)}</td>
+                              {cropVals.map((v, ci) => <td key={ci} style={tdStyle}>{v || "—"}</td>)}
+                              <td style={tdTotal}>{total.toFixed(2)}</td>
+                            </tr>
+                          );
                       })}
                       <tr style={{ position: "sticky", bottom: 0 }}>
                         <td style={{ ...tdFirst, background: "#1a2e1a", color: "#4ade80", fontWeight: 800, zIndex: 2 }}>TOTAL</td>
                         <td style={{ ...thStyle, color: "#4ade80" }}>{barangays.reduce((s, b) => s + (Number((productionData[b.code] || {}).land_area_ha) || 0), 0).toFixed(2)}</td>
+                        <td style={{ padding: 0, position: "relative", width: 0 }}>
+                          {(() => {
+                            const tMan = barangays.reduce((s, b) => s + (Number((productionData[b.code] || {}).land_area_ha) || 0), 0);
+                            const tFarm = barangays.reduce((s, b) => s + (farmerLandTotals[b.code]?.land || 0), 0);
+                            if (Math.abs(tMan - tFarm) < 0.01) return null;
+                            return (
+                              <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "1px 4px", borderRadius: 4, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                                {(tMan - tFarm).toFixed(2)}
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td style={{ ...thStyle, color: "#4ade80", background: "#0d2210" }}>{barangays.reduce((s, b) => s + (farmerLandTotals[b.code]?.land || 0), 0).toFixed(2)}</td>
                         <td style={{ ...thStyle, color: "#4ade80" }}>{barangays.reduce((s, b) => s + (Number((productionData[b.code] || {}).agri_land_area_ha) || 0), 0).toFixed(2)}</td>
+                        <td style={{ padding: 0, position: "relative", width: 0 }}>
+                          {(() => {
+                            const tMan = barangays.reduce((s, b) => s + (Number((productionData[b.code] || {}).agri_land_area_ha) || 0), 0);
+                            const tFarm = barangays.reduce((s, b) => s + (farmerLandTotals[b.code]?.agri || 0), 0);
+                            if (Math.abs(tMan - tFarm) < 0.01) return null;
+                            return (
+                              <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "1px 4px", borderRadius: 4, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                                {(tMan - tFarm).toFixed(2)}
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td style={{ ...thStyle, color: "#4ade80", background: "#0d2210" }}>{barangays.reduce((s, b) => s + (farmerLandTotals[b.code]?.agri || 0), 0).toFixed(2)}</td>
                         {products.map(p => {
                           const sum = barangays.reduce((s, b) => s + (Number(((productionData[b.code] || {}).crop_data || {})[p]) || 0), 0);
@@ -506,7 +554,11 @@ export function ReportsModule({ user, regionCode, municipalityCode, barangays, p
                   <tr>
                     <th style={{ ...thStyle, textAlign: "left", position: "sticky", left: 0, zIndex: 6, borderRight: "2px solid rgba(74,222,128,0.3)" }}>Name of Barangay</th>
                     <th style={thStyle}>Land Area (Ha)</th>
+                    <th style={{ width: 0, padding: 0 }} />
+                    <th style={{ ...thStyle, background: "#0d2210" }}>Land Area (Farmers)</th>
                     <th style={thStyle}>Agri. Land Area (Ha)</th>
+                    <th style={{ width: 0, padding: 0 }} />
+                    <th style={{ ...thStyle, background: "#0d2210" }}>Agri. Area (Farmers)</th>
                     {products.map(p => <th key={p} style={thStyle}>{p} (MT)</th>)}
                     <th style={{ ...thStyle, background: "#0f1f0f", color: "#4ade80" }}>TOTAL (MT)</th>
                   </tr>
@@ -522,20 +574,70 @@ export function ReportsModule({ user, regionCode, municipalityCode, barangays, p
                         const cropVals = products.map(p => Number(cd[p]) || 0);
                         const total = cropVals.reduce((s, v) => s + v, 0);
                         const bg = i % 2 === 0 ? "#f9fafb" : "#fff";
-                        return (
-                          <tr key={brgy.code} style={{ background: bg }}>
-                            <td style={{ ...tdFirst, background: bg }}>{brgy.name}</td>
-                            <td style={tdStyle}>{row.land_area_ha || "—"}</td>
-                            <td style={tdStyle}>{row.agri_land_area_ha || "—"}</td>
-                            {cropVals.map((v, ci) => <td key={ci} style={tdStyle}>{v || "—"}</td>)}
-                            <td style={tdTotal}>{total.toFixed(2)}</td>
-                          </tr>
-                        );
+                        const manualLand = Number(row.land_area_ha) || 0;
+                        const autoLand = (farmerLandTotals[brgy.code] || { land: 0 }).land;
+                        const landDiff = Math.abs(manualLand - autoLand) > 0.01;
+                        
+                        const manualAgri = Number(row.agri_land_area_ha) || 0;
+                        const autoAgri = (farmerLandTotals[brgy.code] || { agri: 0 }).agri;
+                        const agriDiff = Math.abs(manualAgri - autoAgri) > 0.01;
+
+                          return (
+                            <tr key={brgy.code} style={{ background: bg }}>
+                              <td style={{ ...tdFirst, background: bg }}>{brgy.name}</td>
+                              <td style={{ ...tdStyle, background: landDiff ? "#fef2f2" : bg, color: landDiff ? "#ef4444" : "#374151" }}>{manualLand.toFixed(2)}</td>
+                              <td style={{ padding: 0, position: "relative", width: 0 }}>
+                                {landDiff && (
+                                  <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "1px 4px", borderRadius: 4, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                                    {(manualLand - autoLand).toFixed(2)}
+                                  </div>
+                                )}
+                              </td>
+                              <td style={{ ...tdStyle, background: "rgba(34,197,94,0.07)", color: "#16a34a", fontWeight: 700 }}>{autoLand.toFixed(2)}</td>
+                              <td style={{ ...tdStyle, background: agriDiff ? "#fef2f2" : bg, color: agriDiff ? "#ef4444" : "#374151" }}>{manualAgri.toFixed(2)}</td>
+                              <td style={{ padding: 0, position: "relative", width: 0 }}>
+                                {agriDiff && (
+                                  <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "1px 4px", borderRadius: 4, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                                    {(manualAgri - autoAgri).toFixed(2)}
+                                  </div>
+                                )}
+                              </td>
+                              <td style={{ ...tdStyle, background: "rgba(34,197,94,0.07)", color: "#16a34a", fontWeight: 700 }}>{autoAgri.toFixed(2)}</td>
+                              {cropVals.map((v, ci) => <td key={ci} style={tdStyle}>{v || "—"}</td>)}
+                              <td style={tdTotal}>{total.toFixed(2)}</td>
+                            </tr>
+                          );
                       })}
                       <tr style={{ position: "sticky", bottom: 0 }}>
                         <td style={{ ...tdFirst, background: "#1a2e1a", color: "#4ade80", fontWeight: 800, zIndex: 2 }}>TOTAL</td>
                         <td style={{ ...thStyle, color: "#4ade80" }}>{barangays.reduce((s, b) => s + (Number((volumeData[b.code] || {}).land_area_ha) || 0), 0).toFixed(2)}</td>
+                        <td style={{ padding: 0, position: "relative", width: 0 }}>
+                          {(() => {
+                            const tMan = barangays.reduce((s, b) => s + (Number((volumeData[b.code] || {}).land_area_ha) || 0), 0);
+                            const tFarm = barangays.reduce((s, b) => s + (farmerLandTotals[b.code]?.land || 0), 0);
+                            if (Math.abs(tMan - tFarm) < 0.01) return null;
+                            return (
+                              <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "1px 4px", borderRadius: 4, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                                {(tMan - tFarm).toFixed(2)}
+                              </div>
+                            );
+                          })()}
+                        </td>
+                        <td style={{ ...thStyle, color: "#4ade80", background: "#0d2210" }}>{barangays.reduce((s, b) => s + (farmerLandTotals[b.code]?.land || 0), 0).toFixed(2)}</td>
                         <td style={{ ...thStyle, color: "#4ade80" }}>{barangays.reduce((s, b) => s + (Number((volumeData[b.code] || {}).agri_land_area_ha) || 0), 0).toFixed(2)}</td>
+                        <td style={{ padding: 0, position: "relative", width: 0 }}>
+                          {(() => {
+                            const tMan = barangays.reduce((s, b) => s + (Number((volumeData[b.code] || {}).agri_land_area_ha) || 0), 0);
+                            const tFarm = barangays.reduce((s, b) => s + (farmerLandTotals[b.code]?.agri || 0), 0);
+                            if (Math.abs(tMan - tFarm) < 0.01) return null;
+                            return (
+                              <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "1px 4px", borderRadius: 4, fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                                {(tMan - tFarm).toFixed(2)}
+                              </div>
+                            );
+                          })()}
+                        </td>
+                        <td style={{ ...thStyle, color: "#4ade80", background: "#0d2210" }}>{barangays.reduce((s, b) => s + (farmerLandTotals[b.code]?.agri || 0), 0).toFixed(2)}</td>
                         {products.map(p => {
                           const sum = barangays.reduce((s, b) => s + (Number(((volumeData[b.code] || {}).crop_data || {})[p]) || 0), 0);
                           return <td key={p} style={{ ...thStyle, color: "#4ade80" }}>{sum.toFixed(2)}</td>;

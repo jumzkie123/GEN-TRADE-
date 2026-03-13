@@ -18,6 +18,8 @@ const emptyForm = {
 
 export function FarmersModule({ user, barangays, products, municipalityCode }: FarmersModuleProps) {
   const [form, setForm] = useState({ ...emptyForm });
+  const [landUnit, setLandUnit] = useState<"Ha" | "Sqm">("Ha");
+  const [agriUnit, setAgriUnit] = useState<"Ha" | "Sqm">("Ha");
   const [isSaving, setIsSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,12 +146,55 @@ export function FarmersModule({ user, barangays, products, municipalityCode }: F
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
-                <label style={labelStyle}>Land Area (Ha)</label>
-                <input type="number" step="0.01" style={inputStyle} value={form.land_area} onChange={e => setField("land_area", e.target.value)} placeholder="0.00" />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Land Area</label>
+                  <select value={landUnit} onChange={e => setLandUnit(e.target.value as any)}
+                    style={{ border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "2px 4px", background: "#fff", cursor: "pointer", color: "#16a34a" }}>
+                    <option value="Ha">HECTARES (HA)</option>
+                    <option value="Sqm">SQ. METERS (SQM)</option>
+                  </select>
+                </div>
+                <div style={{ position: "relative" }}>
+                  <input type="number" step="0.0001" style={inputStyle} 
+                    value={landUnit === "Sqm" ? (form.land_area ? (Number(form.land_area) * 10000).toFixed(0) : "") : form.land_area} 
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (landUnit === "Sqm") setField("land_area", v ? (Number(v) / 10000).toFixed(4) : "");
+                      else setField("land_area", v);
+                    }} 
+                    placeholder="0.00" 
+                  />
+                  <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>{landUnit}</div>
+                </div>
+                {form.land_area && <div style={{ fontSize: 11, color: "#22c55e", marginTop: 4, fontWeight: 500 }}>
+                  = {landUnit === "Sqm" ? `${form.land_area} Ha` : `${(Number(form.land_area) * 10000).toLocaleString()} sqm`}
+                </div>}
               </div>
+
               <div>
-                <label style={labelStyle}>Agricultural Land Area (Ha)</label>
-                <input type="number" step="0.01" style={inputStyle} value={form.agricultural_land_area} onChange={e => setField("agricultural_land_area", e.target.value)} placeholder="0.00" />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Agri. Land Area</label>
+                  <select value={agriUnit} onChange={e => setAgriUnit(e.target.value as any)}
+                    style={{ border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "2px 4px", background: "#fff", cursor: "pointer", color: "#16a34a" }}>
+                    <option value="Ha">HECTARES (HA)</option>
+                    <option value="Sqm">SQ. METERS (SQM)</option>
+                  </select>
+                </div>
+                <div style={{ position: "relative" }}>
+                  <input type="number" step="0.0001" style={inputStyle} 
+                    value={agriUnit === "Sqm" ? (form.agricultural_land_area ? (Number(form.agricultural_land_area) * 10000).toFixed(0) : "") : form.agricultural_land_area} 
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (agriUnit === "Sqm") setField("agricultural_land_area", v ? (Number(v) / 10000).toFixed(4) : "");
+                      else setField("agricultural_land_area", v);
+                    }} 
+                    placeholder="0.00" 
+                  />
+                  <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>{agriUnit}</div>
+                </div>
+                {form.agricultural_land_area && <div style={{ fontSize: 11, color: "#22c55e", marginTop: 4, fontWeight: 500 }}>
+                  = {agriUnit === "Sqm" ? `${form.agricultural_land_area} Ha` : `${(Number(form.agricultural_land_area) * 10000).toLocaleString()} sqm`}
+                </div>}
               </div>
             </div>
           </div>
@@ -185,7 +230,7 @@ export function FarmersModule({ user, barangays, products, municipalityCode }: F
           </div>
 
           <button type="submit" disabled={isSaving}
-            style={{ width: "100%", height: 50, background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit", boxShadow: "0 4px 20px rgba(34,197,94,0.3)", opacity: isSaving ? 0.7 : 1 }}>
+            style={{ width: "100%", height: 50, background: "linear-gradient(135deg,#0f5f2e,#0a4020)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit", boxShadow: "0 4px 20px rgba(0,0,0,0.3)", opacity: isSaving ? 0.7 : 1 }}>
             {isSaving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : <><UserPlus size={18} /> Register Farmer</>}
           </button>
         </form>

@@ -57,14 +57,45 @@ export function ProductionAreaModule({ user, regionCode, municipalityCode, baran
   }, [municipalityCode, user?.id, period.type, period.year, period.quarter, period.month]);
 
   const setVal = (brgyCode: string, field: string, value: string) => {
-    setData(prev => ({ ...prev, [brgyCode]: { ...prev[brgyCode], [field]: value === "" ? "" : Number(value) } }));
+    const parsedValue = value === "" ? "" : Number(value);
+    if (field === "agri_land_area_ha" && typeof parsedValue === "number") {
+      const current = data[brgyCode] || {};
+      const cropData = current.crop_data || {};
+      let totalCrops = 0;
+      products.forEach(p => { totalCrops += Number(cropData[p]) || 0; });
+      if (parsedValue < totalCrops) {
+        alert(`Cannot decrease Agricultural Land Area below the total declared crops (${totalCrops}). Decrease crops first.`);
+        return;
+      }
+    }
+    setData(prev => ({ ...prev, [brgyCode]: { ...prev[brgyCode], [field]: parsedValue } }));
   };
 
   const setCropVal = (brgyCode: string, crop: string, value: string) => {
+    const parsedValue = value === "" ? "" : Number(value);
+    if (typeof parsedValue === "number" && parsedValue > 0) {
+      const current = data[brgyCode] || {};
+      const cropData = current.crop_data || {};
+      const agriArea = Number(current.agri_land_area_ha) || 0;
+      
+      if (agriArea === 0) {
+        alert("Please declare the Agricultural Land Area first.");
+        return;
+      }
+
+      let sumOtherCrops = 0;
+      products.forEach(p => {
+        if (p !== crop) sumOtherCrops += Number(cropData[p]) || 0;
+      });
+      if (sumOtherCrops + parsedValue > agriArea) {
+        alert(`Total cannot exceed Agricultural Land Area (${agriArea}).`);
+        return;
+      }
+    }
     setData(prev => {
       const current = prev[brgyCode] || {};
       const cropData = current.crop_data || {};
-      return { ...prev, [brgyCode]: { ...current, crop_data: { ...cropData, [crop]: value === "" ? "" : Number(value) } } };
+      return { ...prev, [brgyCode]: { ...current, crop_data: { ...cropData, [crop]: parsedValue } } };
     });
   };
 
@@ -125,7 +156,7 @@ export function ProductionAreaModule({ user, regionCode, municipalityCode, baran
           </div>
         </div>
         <button onClick={handleSave} disabled={saving || loading}
-          style={{ height: 44, padding: "0 24px", background: "rgba(255,255,255,0.2)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontFamily: "inherit", opacity: saving || loading ? 0.7 : 1 }}>
+          style={{ height: 44, padding: "0 24px", background: "#0f5f2e", color: "#fff", border: "2px solid rgba(255,255,255,0.25)", borderRadius: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontFamily: "inherit", boxShadow: "0 4px 18px rgba(0,0,0,0.35)", opacity: saving || loading ? 0.7 : 1 }}>
           {saving ? <><Loader2 size={16} className="animate-spin" /> Saving...</> : <><Save size={16} /> Save — {periodLabel(period)}</>}
         </button>
       </div>
@@ -133,14 +164,6 @@ export function ProductionAreaModule({ user, regionCode, municipalityCode, baran
       {/* Period selector */}
       <div style={{ marginBottom: 16 }}>
         <PeriodSelector value={period} onChange={p => { setPeriod(p); }} label="Select Period" />
-      </div>
-
-      {/* Legend */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "12px 16px", background: "rgba(34,197,94,0.07)", borderRadius: 10, border: "1px solid rgba(34,197,94,0.2)" }}>
-        <Info size={15} style={{ color: "#16a34a", flexShrink: 0 }} />
-        <p style={{ margin: 0, fontSize: 13, color: "#374151" }}>
-          <span style={{ fontWeight: 600, color: "#16a34a" }}>Green-shaded cells</span> are auto-calculated from registered farmers' land area. Each period's data is saved separately.
-        </p>
       </div>
 
       {loading ? (
@@ -158,13 +181,11 @@ export function ProductionAreaModule({ user, regionCode, municipalityCode, baran
                     Name of Barangay
                   </th>
                   <th style={thStyle}>Land Area (Ha)</th>
-                  <th style={{ ...thStyle, background: "#0d2210" }}>
-                    Land Area<br /><span style={{ fontSize: 10, opacity: 0.8 }}>(Farmers — auto)</span>
-                  </th>
+                  <th style={{ width: 0, padding: 0 }} /> {/* Spacer for inline variance */}
+                  <th style={{ ...thStyle, background: "#0d2210" }}>Land Area (Farmers)</th>
                   <th style={thStyle}>Agri. Land Area (Ha)</th>
-                  <th style={{ ...thStyle, background: "#0d2210" }}>
-                    Agri. Area<br /><span style={{ fontSize: 10, opacity: 0.8 }}>(Farmers — auto)</span>
-                  </th>
+                  <th style={{ width: 0, padding: 0 }} /> {/* Spacer for inline variance */}
+                  <th style={{ ...thStyle, background: "#0d2210" }}>Agri. Area (Farmers)</th>
                   {products.map(p => (
                     <th key={p} style={thStyle}>{p} (Ha)</th>
                   ))}
@@ -184,13 +205,59 @@ export function ProductionAreaModule({ user, regionCode, municipalityCode, baran
                         {brgy.name}
                       </td>
                       <td style={{ padding: "6px 10px" }}>
-                        <input type="number" step="0.01" style={inputCls} value={row.land_area_ha ?? ""} onChange={e => setVal(brgy.code, "land_area_ha", e.target.value)} />
+                        {(() => {
+                          const manual = Number(row.land_area_ha) || 0;
+                          const auto = ft.land;
+                          const diff = Math.abs(manual - auto) > 0.01;
+                          return (
+                            <input type="number" step="0.01" 
+                              style={{ ...inputCls, borderColor: diff ? "#ef4444" : "#e5e7eb", background: diff ? "#fef2f2" : "#fff" }} 
+                              value={row.land_area_ha ?? ""} 
+                              onChange={e => setVal(brgy.code, "land_area_ha", e.target.value)} 
+                              title={diff ? `Discrepancy: ${manual.toFixed(2)} vs Farmer Total ${auto.toFixed(2)}` : ""}
+                            />
+                          );
+                        })()}
+                      </td>
+                      <td style={{ padding: 0, position: "relative", width: 0 }}>
+                        {(() => {
+                          const diff = (Number(row.land_area_ha) || 0) - ft.land;
+                          if (Math.abs(diff) < 0.01) return null;
+                          return (
+                            <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10, boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+                              {diff > 0 ? "+" : ""}{diff.toFixed(2)}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td style={{ padding: "6px 10px", background: i % 2 === 0 ? "rgba(34,197,94,0.04)" : "rgba(34,197,94,0.06)" }}>
                         <input type="number" readOnly style={autoCalcCls} value={ft.land.toFixed(2)} title="Auto-calculated from farmers" />
                       </td>
                       <td style={{ padding: "6px 10px" }}>
-                        <input type="number" step="0.01" style={inputCls} value={row.agri_land_area_ha ?? ""} onChange={e => setVal(brgy.code, "agri_land_area_ha", e.target.value)} />
+                        {(() => {
+                          const manual = Number(row.agri_land_area_ha) || 0;
+                          const auto = ft.agri;
+                          const diff = Math.abs(manual - auto) > 0.01;
+                          return (
+                            <input type="number" step="0.01" 
+                              style={{ ...inputCls, borderColor: diff ? "#ef4444" : "#e5e7eb", background: diff ? "#fef2f2" : "#fff" }} 
+                              value={row.agri_land_area_ha ?? ""} 
+                              onChange={e => setVal(brgy.code, "agri_land_area_ha", e.target.value)} 
+                              title={diff ? `Discrepancy: ${manual.toFixed(2)} vs Farmer Total ${auto.toFixed(2)}` : ""}
+                            />
+                          );
+                        })()}
+                      </td>
+                      <td style={{ padding: 0, position: "relative", width: 0 }}>
+                        {(() => {
+                          const diff = (Number(row.agri_land_area_ha) || 0) - ft.agri;
+                          if (Math.abs(diff) < 0.01) return null;
+                          return (
+                            <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10, boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+                              {diff > 0 ? "+" : ""}{diff.toFixed(2)}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td style={{ padding: "6px 10px", background: i % 2 === 0 ? "rgba(34,197,94,0.04)" : "rgba(34,197,94,0.06)" }}>
                         <input type="number" readOnly style={autoCalcCls} value={ft.agri.toFixed(2)} title="Auto-calculated from farmers" />
@@ -218,8 +285,22 @@ export function ProductionAreaModule({ user, regionCode, municipalityCode, baran
                     const grand = cropTotals.reduce((s, v) => s + v, 0);
                     return (<>
                       <td style={{ padding: "12px 10px", color: "#4ade80", fontWeight: 700, textAlign: "right" }}>{tLandHa.toFixed(2)}</td>
+                      <td style={{ padding: 0, position: "relative", width: 0 }}>
+                        {Math.abs(tLandHa - tLandFarm) > 0.01 && (
+                          <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                            {(tLandHa - tLandFarm).toFixed(2)}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: "12px 10px", color: "#4ade80", fontWeight: 700, textAlign: "right", background: "#0d2210" }}>{tLandFarm.toFixed(2)}</td>
                       <td style={{ padding: "12px 10px", color: "#4ade80", fontWeight: 700, textAlign: "right" }}>{tAgriHa.toFixed(2)}</td>
+                      <td style={{ padding: 0, position: "relative", width: 0 }}>
+                        {Math.abs(tAgriHa - tAgriFarm) > 0.01 && (
+                          <div style={{ position: "absolute", left: 0, top: "50%", transform: "translate(-50%, -50%)", background: "#ef4444", color: "#fff", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", zIndex: 10 }}>
+                            {(tAgriHa - tAgriFarm).toFixed(2)}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: "12px 10px", color: "#4ade80", fontWeight: 700, textAlign: "right", background: "#0d2210" }}>{tAgriFarm.toFixed(2)}</td>
                       {cropTotals.map((v, i) => <td key={i} style={{ padding: "12px 10px", color: "#4ade80", fontWeight: 700, textAlign: "right" }}>{v.toFixed(2)}</td>)}
                       <td style={{ padding: "12px 16px", color: "#4ade80", fontWeight: 800, textAlign: "right", background: "#0f1f0f" }}>{grand.toFixed(2)}</td>
