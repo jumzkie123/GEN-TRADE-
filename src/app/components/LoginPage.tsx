@@ -852,13 +852,19 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <div className="overlay-panel overlay-left">
               <div className="overlay-circle overlay-circle-1" />
               <div className="overlay-circle overlay-circle-2" />
-              <div className="login-overlay-logo">
-                <Leaf size={28} color="#ffffff" />
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '50%',
+                width: '280px',
+                height: '280px',
+                marginBottom: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)'
+              }}>
+                <img src="/logo-transparent.png" alt="Logo" style={{ width: '220px', height: '220px', objectFit: 'contain' }} />
               </div>
-              <h3 className="login-overlay-title">Welcome Back!</h3>
-              <p className="login-overlay-desc">
-                Already have an account? Sign in to access your GenTrade territory dashboard.
-              </p>
               <button type="button" className="login-toggle-btn" onClick={handleToggle}>
                 Sign In
               </button>
@@ -867,13 +873,19 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <div className="overlay-panel overlay-right">
               <div className="overlay-circle overlay-circle-1" />
               <div className="overlay-circle overlay-circle-3" />
-              <div className="login-overlay-logo">
-                <Leaf size={28} color="#ffffff" />
+              <div style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '50%',
+                width: '340px',
+                height: '340px',
+                marginBottom: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)'
+              }}>
+                <img src="/logo-transparent.png" alt="Logo" style={{ width: '280px', height: '280px', objectFit: 'contain' }} />
               </div>
-              <h3 className="login-overlay-title">Hello, Friend!</h3>
-              <p className="login-overlay-desc">
-                Don't have an account yet? Register now and start managing your territory with GenTrade.
-              </p>
               <button type="button" className="login-toggle-btn" onClick={handleToggle}>
                 Sign Up
               </button>

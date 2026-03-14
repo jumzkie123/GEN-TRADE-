@@ -230,12 +230,8 @@ export function Sidebar({ currentPage, onPageChange, categories = [], onCategori
             fontSize: '16px', fontWeight: 700, color: '#ffffff',
             letterSpacing: '1px', lineHeight: 1.2, margin: 0,
             fontFamily: "'Poppins', sans-serif",
-          }}>GenTrade</h1>
-          <p style={{
-            fontSize: '10px', color: 'rgba(74, 222, 128, 0.7)',
-            fontWeight: 600, letterSpacing: '2.5px',
-            textTransform: 'uppercase', margin: 0,
-          }}>TERRITORY</p>
+          }}>AgriTrack</h1>
+         
         </div>
       </div>
 

@@ -118,7 +118,7 @@ export function ReportsModule({ user, regionCode, municipalityCode, barangays, p
   };
 
   // --------- EXPORT HELPERS ---------
-  const applyHeaderStyle = (cell: ExcelJS.Cell, bgColor = "FF1a2e1a", fgColor = "FF4ade80") => {
+  const applyHeaderStyle = (cell: ExcelJS.Cell, bgColor = "FF1a2e1a", fgColor = "FFFFFFFF") => {
     cell.font = { bold: true, color: { argb: fgColor }, size: 10 };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgColor } };
     cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
@@ -206,7 +206,7 @@ export function ReportsModule({ user, regionCode, municipalityCode, barangays, p
     ];
     const tr = ws.addRow(totalRowVals);
     tr.eachCell((cell, cn) => {
-      applyHeaderStyle(cell, "FF1a2e1a", "FF4ade80");
+      applyHeaderStyle(cell, "FF1a2e1a", "FFFFFFFF");
       if (cn > 1) cell.alignment = { horizontal: "right", vertical: "middle" };
     });
 
@@ -245,7 +245,7 @@ export function ReportsModule({ user, regionCode, municipalityCode, barangays, p
       vals.forEach((v, idx) => { if (idx > 0 && typeof v === "number") grandTotal[idx - 1] += v; });
     });
     const tr = ws.addRow(["TOTAL", ...grandTotal]);
-    tr.eachCell(cell => applyHeaderStyle(cell, "FF1a2e1a", "FF4ade80"));
+    tr.eachCell(cell => applyHeaderStyle(cell, "FF1a2e1a", "FFFFFFFF"));
     const buf = await wb.xlsx.writeBuffer();
     saveAs(new Blob([buf]), `Production_Area_${municipalityName}_${periodLabel(period).replace(/\s/g, "_")}.xlsx`);
     setExporting(false);
@@ -260,7 +260,7 @@ export function ReportsModule({ user, regionCode, municipalityCode, barangays, p
     const headers = ["Name of Barangay", "Land Area (Ha)", "Agri. Land Area (Ha)", ...products.map(p => `${p} (MT)`), "TOTAL (MT)"];
     ws.addRow([]); ws.addRow([]); ws.addRow([]);
     const hr = ws.addRow(headers);
-    hr.font = { bold: true, color: { argb: "FF4ade80" } };
+    hr.font = { bold: true, color: { argb: "FFFFFFFF" } };
     hr.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1a2e1a" } };
     ws.columns = [{ width: 22 }, { width: 14 }, { width: 14 }, ...products.map(() => ({ width: 12 })), { width: 12 }];
     let grandTotals = products.map(() => 0);
@@ -283,7 +283,7 @@ export function ReportsModule({ user, regionCode, municipalityCode, barangays, p
       totalLand += landArea; totalAgri += agriArea; grandTotal += total;
     });
     const tr = ws.addRow(["TOTAL", totalLand, totalAgri, ...grandTotals, grandTotal]);
-    tr.eachCell(cell => applyHeaderStyle(cell, "FF1a2e1a", "FF4ade80"));
+    tr.eachCell(cell => applyHeaderStyle(cell, "FF1a2e1a", "FFFFFFFF"));
     const buf = await wb.xlsx.writeBuffer();
     saveAs(new Blob([buf]), `Volume_Production_${municipalityName}_${periodLabel(period).replace(/\s/g, "_")}.xlsx`);
     setExporting(false);

@@ -109,8 +109,7 @@ export function RegionalDashboard({ regionCode, municipalityCode, user }: Region
             <Leaf style={{ width:20, height:20, color:"#fff" }} />
           </div>
           <div>
-            <div style={{ fontSize:16, fontWeight:700, color:"#fff", letterSpacing:1, fontFamily:"'Poppins',sans-serif" }}>GenTrade</div>
-            <div style={{ fontSize:10, color:"rgba(74,222,128,0.7)", fontWeight:600, letterSpacing:"2.5px", textTransform:"uppercase" }}>TERRITORY</div>
+            <div style={{ fontSize:16, fontWeight:700, color:"#fff", letterSpacing:1, fontFamily:"'Poppins',sans-serif" }}>AgriTrack</div>
           </div>
         </div>
 
